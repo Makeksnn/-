@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Acrylic TTS — Языки и голоса</title>
+  <style>
+    :root {
+      --bg:#070708;
+      --glass: rgba(255,255,255,0.04);
+      --glass-2: rgba(255,255,255,0.03);
+      --accent: #00e5ff;
+      --accent-2: #9b5cff;
+      --text: #e9eef6;
+      --muted: rgba(233,238,246,0.6);
+      --radius: 16px;
+    }
+    *{box-sizing:border-box;}
+    html, body {height:100%; margin:0; font-family:Inter,system-ui,sans-serif; background:var(--bg); color:var(--text); display:flex; align-items:center; justify-content:center;}
+    .app {width:960px; max-width:95vw; display:grid; grid-template-columns:250px 1fr; gap:24px; border-radius:var(--radius); background:linear-gradient(180deg,var(--glass),var(--glass-2)); backdrop-filter:blur(12px); padding:24px; box-shadow:0 10px 40px rgba(0,0,0,.6);}
+    h1{margin:0 0 8px;font-size:22px}
+    p{color:var(--muted); margin:0 0 16px; font-size:13px}
+    .glass{background:linear-gradient(180deg,var(--glass),var(--glass-2)); border-radius:12px; padding:16px; box-shadow:0 6px 18px rgba(0,0,0,0.5); backdrop-filter:blur(10px);}
+    textarea{width:100%; min-height:180px; background:transparent; border:1px solid rgba(255,255,255,0.05); border-radius:10px; padding:10px; color:var(--text); font-size:14px;}
+    .controls{display:flex;gap:8px;margin-top:10px; flex-wrap:wrap;}
+    button{background:linear-gradient(90deg,var(--accent),var(--accent-2));border:none;border-radius:10px;padding:10px 16px;color:#000;font-weight:600;cursor:pointer; transition:.2s;}
+    button:hover{transform:scale(1.04)}
+    .right{display:flex; flex-direction:column; gap:16px;}
+
+    /* Список языков всегда видим */
+    .lang-list{max-height:600px; overflow-y:auto;}
+    .lang-item{padding:8px 12px; border-radius:8px; display:flex; align-items:center; gap:8px; cursor:pointer; transition:background .2s, transform .2s;}
+    .lang-item:hover{background:rgba(255,255,255,0.08); transform:translateX(4px);}
+    .lang-item.selected{background:rgba(0,229,255,0.12);}
+    .flag{font-size:16px;}
+
+    /* Список голосов */
+    .voice-list{max-height:200px; overflow-y:auto;}
+    .voice-item{padding:6px 10px; border-radius:6px; cursor:pointer; transition:background .2s, transform .2s;}
+    .voice-item:hover{background:rgba(255,255,255,0.08); transform:translateX(2px);}
+    .voice-item.selected{background:rgba(155,92,255,0.12);}
+  </style>
+</head>
+<body>
+  <div class="app">
+    <!-- Левая панель: языки -->
+    <div class="glass lang-list" id="langList">
+      <h1>Языки</h1>
+      <p>Выберите язык, чтобы обновить голоса</p>
+    </div>
+
+    <!-- Правая панель: TTS и голоса -->
+    <div class="right">
+      <div class="glass">
+        <textarea id="text">Привет! Это демонстрация TTS в стиле чёрного акрила.</textarea>
+        <div class="controls">
+          <button id="speak">▶ Произнести</button>
+          <button id="stop">■ Стоп</button>
+        </div>
+      </div>
+
+      <div class="glass voice-list" id="voiceList">
+        <h1>Голоса</h1>
+        <p>Выберите голос для выбранного языка</p>
+      </div>
+
+      <div class="glass">
+        <label>Скорость</label>
+        <input type="range" id="rate" min="0.5" max="2" step="0.1" value="1">
+        <label>Высота</label>
+        <input type="range" id="pitch" min="0" max="2" step="0.1" value="1">
+        <label>Громкость</label>
+        <input type="range" id="vol" min="0" max="1" step="0.05" value="1">
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const synth = window.speechSynthesis;
+    const textEl = document.getElementById('text');
+    const speakBtn = document.getElementById('speak');
+    const stopBtn = document.getElementById('stop');
+    const rate = document.getElementById('rate');
+    const pitch = document.getElementById('pitch');
+    const vol = document.getElementById('vol');
+    const langList = document.getElementById('langList');
+    const voiceList = document.getElementById('voiceList');
+
+    let voices = [];
+    let currentLang = 'all';
+    let selectedVoiceIndex = null;
+
+    function getFlagEmoji(countryCode){
+      if(!countryCode) return '🌐';
+      return countryCode.replace(/./g, c=>String.fromCodePoint(127397 + c.toUpperCase().charCodeAt()));
+    }
+
+    function populateVoices(){
+      voices = synth.getVoices();
+      renderLanguages();
+      renderVoices();
+    }
+
+    function renderLanguages(){
+      const langs = [...new Set(voices.map(v=>v.lang))].sort();
+      langList.innerHTML='<h1>Языки</h1><p>Выберите язык, чтобы обновить голоса</p>';
+      const allItem = document.createElement('div');
+      allItem.textContent='🌐 Все языки';
+      allItem.className='lang-item' + (currentLang==='all'?' selected':'');
+      allItem.onclick=()=>{ currentLang='all'; renderLanguages(); renderVoices(); };
+      langList.appendChild(allItem);
+      langs.forEach(lang=>{
+        const item = document.createElement('div');
+        const flag = getFlagEmoji(lang.split('-')[1]||lang);
+        item.innerHTML=`<span class="flag">${flag}</span>${lang}`;
+        item.className='lang-item'+(currentLang===lang?' selected':'');
+        item.onclick=()=>{ currentLang=lang; renderLanguages(); renderVoices(); };
+        langList.appendChild(item);
+      });
+    }
+
+    function renderVoices(){
+      const filtered = voices.filter(v=>currentLang==='all'||v.lang===currentLang);
+      voiceList.innerHTML='<h1>Голоса</h1><p>Выберите голос для выбранного языка</p>';
+      filtered.forEach((v,i)=>{
+        const item = document.createElement('div');
+        item.textContent=`${v.name} — ${v.lang}`;
+        item.className='voice-item'+(selectedVoiceIndex===i?' selected':'');
+        item.onclick=()=>{ selectedVoiceIndex=i; renderVoices(); };
+        voiceList.appendChild(item);
+      });
+    }
+
+    speakBtn.onclick=()=>{
+      if(!textEl.value.trim())return;
+      synth.cancel();
+      const utter = new SpeechSynthesisUtterance(textEl.value);
+      const filtered = voices.filter(v=>currentLang==='all'||v.lang===currentLang);
+      if(selectedVoiceIndex!==null) utter.voice=filtered[selectedVoiceIndex];
+      utter.rate=parseFloat(rate.value);
+      utter.pitch=parseFloat(pitch.value);
+      utter.volume=parseFloat(vol.value);
+      synth.speak(utter);
+    };
+    stopBtn.onclick=()=>synth.cancel();
+
+    populateVoices();
+    if(speechSynthesis.onvoiceschanged!==undefined){speechSynthesis.onvoiceschanged=populateVoices;}
+  </script>
+</body>
+</html>
