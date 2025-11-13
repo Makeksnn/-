@@ -8,7 +8,7 @@ You can view it locally by opening the HTML file in a browser, or online via Git
 
 ## How to Use
 1. Clone or download this repository.
-2. Open the `index.html` file in your web browser.
+2. Open the `tts_acrylic_black_html_index (1).html` file in your web browser.
 3. Enjoy your website!
 
 # Мой Сайт
@@ -23,6 +23,6 @@ You can view it locally by opening the HTML file in a browser, or online via Git
 
 ## Как использовать
 1. Клонируйте или скачайте этот репозиторий.
-2. Откройте файл `index.html` в браузере.
+2. Откройте файл `tts_acrylic_black_html_index (1).html` в браузере.
 3. Наслаждайтесь сайтом!
 
